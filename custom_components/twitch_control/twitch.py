@@ -9,64 +9,53 @@ DOMAIN = "twitch_control"
 _LOGGER = logging.getLogger(__name__)
 
 class TwitchBot(commands.Bot):
-    def __init__(self, hass: HomeAssistant, token: str, channel: str):
-        """Initialize the bot with the given token and channel."""
-        super().__init__(token=token, prefix="!", initial_channels=[channel])
-        self.hass = hass  # Store the Home Assistant instance
-        self.channel = channel  # Store the channel
-        self._client = self  # Fix TwitchIO 2.x changes
+    def __init__(self, hass, oauth_token, channel, client_id, client_secret, bot_id):
+        self.hass = hass
+        self.channel_name = channel
+        # TwitchIO 3.x uses these for authentication and internal token management
+        super().__init__(
+            token=oauth_token, 
+            prefix="!", 
+            initial_channels=[channel],
+            client_id=client_id,
+            client_secret=client_secret,
+            bot_id=bot_id
+        )
+       
     async def event_ready(self):
         """When the bot is connected and ready."""
-        _LOGGER.error(f"Twitch bot attributes: {dir(self)}")  # Log available attributes
-        _LOGGER.error(f"Twitch bot connected as {self.nick}")
-    async def event_disconnect(self):
-        """Handle bot disconnection."""
-        _LOGGER.error("Twitch bot disconnected!")
-    async def event_command_error(self, ctx, error):
-        """Log any command errors."""
-        _LOGGER.error(f"Twitch command error: {error}")
-    async def event_disconnect(self):
-        """Handle bot disconnection."""
-        _LOGGER.error("Twitch bot disconnected! Attempting to restart...")
-        await asyncio.sleep(5)  # Wait a bit before restarting
-        await self.start()
+        _LOGGER.info(f"Twitch bot connected as {self.nick} to channel {self.channel_name}")
+
     async def event_message(self, message):
         """Handle incoming messages from the Twitch chat."""
-        if message.echo or message.author.name.lower() == self.nick.lower():
-            return  # Ignore own messages
-
-        _LOGGER.error(f"Twitch command received: {message.content}")  # Log the received message
+        if message.echo or not message.author:
+            return
 
         if message.content.startswith("!lights"):
             args = message.content.split()
             color = args[1] if len(args) > 1 else "default"
+            _LOGGER.info(f"Twitch command received: lights with color {color}")
 
             # Trigger Home Assistant automation
             await self.hass.services.async_call(
                 "automation", "trigger",
-                {"entity_id": "automation.twitch_lights", "variables": {"color": color}}
+                {"entity_id": "automation.twitch_lights", "variables": {"color": color}},
+                context=None
             )
-
 
     async def send_message(self, message: str):
         """Send a message to the Twitch channel."""
-        if not self.connected_channels:
-            _LOGGER.error("Twitch bot is not connected to any channels.")
-            return
-        
-        try:
-            channel = self.connected_channels[0]  # Get the first connected channel
+        # Ensure we wait for the channel to be ready/joined
+        channel = self.get_channel(self.channel_name)
+        if channel:
             await channel.send(message)
-        except Exception as e:
-            _LOGGER.error(f"Failed to send message: {e}")
+        else:
+            _LOGGER.error(f"Could not find channel {self.channel_name} to send message.")
 
     async def close(self):
         """Gracefully shut down the bot."""
-        try:
-            await super().close()
-            _LOGGER.error("Twitch bot closed.")
-        except Exception as e:
-            _LOGGER.error(f"Error closing Twitch bot: {e}")
+        _LOGGER.info("Closing Twitch bot...")
+        await super().close()
 
 async def async_setup(hass: HomeAssistant, config: ConfigType):
     """Set up the Twitch integration."""

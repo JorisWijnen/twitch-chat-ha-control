@@ -19,6 +19,9 @@ class TwitchConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         schema = vol.Schema({
             vol.Required("twitch_channel"): str,
             vol.Required("twitch_oauth_token"): str,
+            vol.Required("client_id"): str,
+            vol.Required("client_secret"): str,
+            vol.Required("bot_id"): str,
         })
 
         return self.async_show_form(step_id="user", data_schema=schema, errors=errors)
@@ -42,6 +45,9 @@ class TwitchOptionsFlowHandler(config_entries.OptionsFlow):
         schema = vol.Schema({
             vol.Required("twitch_channel", default=self.entry.data["twitch_channel"]): str,
             vol.Required("twitch_oauth_token", default=self.entry.data["twitch_oauth_token"]): str,
+            vol.Required("client_id", default=self.entry.data["client_id"]): str,
+            vol.Required("client_secret", default=self.entry.data["client_secret"]): str,
+            vol.Required("bot_id", default=self.entry.data["bot_id"]): str,   
         })
 
         return self.async_show_form(step_id="init", data_schema=schema)

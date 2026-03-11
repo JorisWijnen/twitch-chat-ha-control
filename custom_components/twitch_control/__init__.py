@@ -2,6 +2,8 @@ import logging
 import asyncio
 from homeassistant.core import HomeAssistant
 from homeassistant.config_entries import ConfigEntry
+from .const import DOMAIN
+from .twitch import TwitchBot
 
 DOMAIN = "twitch_control"
 
@@ -11,19 +13,31 @@ async def async_setup(hass: HomeAssistant, config):
     """Set up Twitch Control from YAML (if used)."""
     return True  # We use config flow, so setup from YAML does nothing
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
+async def async_setup_entry(hass, entry):
     """Set up Twitch Control from a config entry."""
-    from .twitch import TwitchBot
+    data = entry.data
+    
+    bot = TwitchBot(
+        hass,
+        data["twitch_oauth_token"],
+        data["twitch_channel"],
+        data["client_id"],
+        data["client_secret"],
+        data["bot_id"]
+    )
 
-    token = entry.data.get("twitch_oauth_token")
-    channel = entry.data.get("twitch_channel")
+    # Store the bot instance in hass.data
+    hass.data.setdefault(DOMAIN, {})[entry.entry_id] = bot
 
-    if not token or not channel:
-        _LOGGER.error("Missing Twitch OAuth token or channel in config entry")
-        return False
+    # Register the service for this specific entry
+    async def handle_send_message(call):
+        msg = call.data.get("message", "Hello from Home Assistant!")
+        await bot.send_message(msg)
 
-    bot = TwitchBot(hass, token, channel)
-    hass.data[DOMAIN] = bot
+    hass.services.async_register(DOMAIN, "send_message", handle_send_message)
+
+    # Start the bot as a background task
+    entry.async_create_background_task(hass, bot.start(), "twitch-bot-start")
 
     # Register the send_message service
     async def handle_send_message(call):
@@ -61,16 +75,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
 
     return True
 
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry):
+async def async_unload_entry(hass, entry):
     """Unload a config entry."""
-    bot = hass.data.pop(DOMAIN, None)
-
-    if bot:
-        try:
-            await bot.close()  # Ensure the bot shuts down properly
-            _LOGGER.error("Twitch bot closed successfully")
-        except Exception as e:
-            _LOGGER.error(f"Error closing Twitch bot: {e}")
-            return False  # Return False to indicate an error during unload
-
+    bot = hass.data[DOMAIN].pop(entry.entry_id)
+    await bot.close()
     return True
