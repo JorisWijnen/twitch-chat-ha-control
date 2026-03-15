@@ -3,30 +3,36 @@ import twitchio
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.typing import ConfigType
 from twitchio.ext import commands
+from twitchio import eventsub
 
 DOMAIN = "twitch_control"
 
 _LOGGER = logging.getLogger(__name__)
 
 class TwitchBot(commands.Bot):
-    def __init__(self, hass, oauth_token, channel, client_id, client_secret, bot_id):
+    def __init__(self, hass, client_id, client_secret, bot_id, owner_id):
         self.hass = hass
-        self.channel_name = channel
-        # TwitchIO 3.x uses these for authentication and internal token management
+
+        # subscribe to eventsub 'chat' of owner_id's twitch channel
+        subs = [
+        eventsub.ChatMessageSubscription(broadcaster_user_id=owner_id, user_id=bot_id),
+        ]
+
         super().__init__(
-            token=oauth_token, 
-            prefix="!", 
-            initial_channels=[channel],
             client_id=client_id,
             client_secret=client_secret,
-            bot_id=bot_id
+            bot_id=bot_id,
+            owner_id=owner_id,
+            subscriptions=subs,
+            force_subscribe=True,
+            prefix="!",
         )
        
     async def event_ready(self):
         """When the bot is connected and ready."""
         _LOGGER.info(f"Twitch bot connected as {self.nick} to channel {self.channel_name}")
 
-    async def event_message(self, message):
+    async def event_message(self, message: twitchio.ChatMessage):
         """Handle incoming messages from the Twitch chat."""
         if message.echo or not message.author:
             return
@@ -59,14 +65,16 @@ class TwitchBot(commands.Bot):
 
 async def async_setup(hass: HomeAssistant, config: ConfigType):
     """Set up the Twitch integration."""
-    token = config[DOMAIN]["twitch_oauth_token"]
-    channel = config[DOMAIN]["twitch_channel"]
+    client_id = config[DOMAIN]["client_id"]
+    client_secret = config[DOMAIN]["client_secret"]
+    bot_id = config[DOMAIN]["bot_id"]
+    owner_id = config[DOMAIN]["owner_id"]
     
     _LOGGER.error("Starting Bot with credentials: ")
     
     _LOGGER.error(token)
     _LOGGER.error(channel)
-    bot = TwitchBot(hass, token, channel)
+    bot = TwitchBot(hass, client_id, client_secret, bot_id, owner_id)
     hass.data[DOMAIN] = bot
 
     # Listen for Home Assistant stop to gracefully close the bot

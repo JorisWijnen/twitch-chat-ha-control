@@ -19,11 +19,10 @@ async def async_setup_entry(hass, entry):
     
     bot = TwitchBot(
         hass,
-        data["twitch_oauth_token"],
-        data["twitch_channel"],
         data["client_id"],
         data["client_secret"],
-        data["bot_id"]
+        data["bot_id"],
+        data["owner_id"]
     )
 
     # Store the bot instance in hass.data

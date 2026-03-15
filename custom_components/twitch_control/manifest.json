@@ -4,7 +4,7 @@
     "version": "1.0.0",
     "dependencies": [],
     "requirements": ["twitchio", "aiohttp"],
-    "codeowners": ["@charlyschulte"],
+    "codeowners": ["@charlyschulte", "@JorisWijnen"],
     "config_flow": true
   }
   
