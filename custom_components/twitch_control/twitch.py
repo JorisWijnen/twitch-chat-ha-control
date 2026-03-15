@@ -71,9 +71,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType):
     owner_id = config[DOMAIN]["owner_id"]
     
     _LOGGER.error("Starting Bot with credentials: ")
-    
-    _LOGGER.error(token)
-    _LOGGER.error(channel)
+
     bot = TwitchBot(hass, client_id, client_secret, bot_id, owner_id)
     hass.data[DOMAIN] = bot
 
