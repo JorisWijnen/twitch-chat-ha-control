@@ -17,11 +17,10 @@ class TwitchConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             return self.async_create_entry(title="Twitch Control", data=user_input)
 
         schema = vol.Schema({
-            vol.Required("twitch_channel"): str,
-            vol.Required("twitch_oauth_token"): str,
             vol.Required("client_id"): str,
             vol.Required("client_secret"): str,
             vol.Required("bot_id"): str,
+            vol.Required("owner_id"): str
         })
 
         return self.async_show_form(step_id="user", data_schema=schema, errors=errors)
