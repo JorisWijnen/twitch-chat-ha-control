@@ -1,7 +1,7 @@
 {
     "domain": "twitch_control",
     "name": "Twitch Chat Control",
-    "version": "1.0.0",
+    "version": "2.0.0",
     "dependencies": [],
     "requirements": ["twitchio", "aiohttp"],
     "codeowners": ["@charlyschulte", "@JorisWijnen"],

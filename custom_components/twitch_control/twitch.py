@@ -1,23 +1,20 @@
 import logging
 import twitchio
+from .const import DOMAIN
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.typing import ConfigType
 from twitchio.ext import commands
 from twitchio import eventsub
 
-DOMAIN = "twitch_control"
-
 _LOGGER = logging.getLogger(__name__)
 
-class TwitchBot(commands.Bot):
+class TwitchBot(commands.AutoBot):
     def __init__(self, hass, client_id, client_secret, bot_id, owner_id):
         self.hass = hass
-
         # subscribe to eventsub 'chat' of owner_id's twitch channel
         subs = [
         eventsub.ChatMessageSubscription(broadcaster_user_id=owner_id, user_id=bot_id),
         ]
-
         super().__init__(
             client_id=client_id,
             client_secret=client_secret,
@@ -62,6 +59,10 @@ class TwitchBot(commands.Bot):
         """Gracefully shut down the bot."""
         _LOGGER.info("Closing Twitch bot...")
         await super().close()
+
+    @commands.command()
+    async def lights(self, message: twitchio.ChatMessage):
+        pass
 
 async def async_setup(hass: HomeAssistant, config: ConfigType):
     """Set up the Twitch integration."""
